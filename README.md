@@ -13,6 +13,12 @@ _**July 2019** - Add `tf.keras` model implementation (see [here](#choosing-imple
 
 An **online demo** is available at [https://code2vec.org/](https://code2vec.org/).
 
+## See also:
+  * **code2seq** (ICLR'2019) is our newer model. It uses LSTMs to encode paths node-by-node (rather than monolithic path embeddings as in code2vec), and an LSTM to decode a target sequence (rather than predicting a single label at a time as in code2vec). See [PDF](https://openreview.net/pdf?id=H1gKYo09tX), demo at [http://www.code2seq.org](http://www.code2seq.org) and [code](https://github.com/tech-srl/code2seq/).
+  * **Structural Language Models of Code** is a new paper that learns to generate the missing code within a larger code snippet. This is similar to code completion, but is able to predict complex expressions rather than a single token at a time. See [PDF](https://arxiv.org/pdf/1910.00577.pdf), demo at [http://AnyCodeGen.org](http://AnyCodeGen.org).
+  * **Adversarial Examples for Models of Code** is a new paper that shows how to slightly mutate the input code snippet of code2vec and GNNs models (thus, introducing adversarial examples), such that the model (code2vec or GNNs) will output a prediction of our choice. See [PDF](https://arxiv.org/pdf/1910.07517.pdf) (code: soon).
+  * **Neural Reverse Engineering of Stripped Binaries** is a new paper that learns to predict procedure names in stripped binaries, thus use neural networks for reverse engineering. See [PDF](https://arxiv.org/pdf/1902.09122) (code: soon).
+
 This is a TensorFlow implementation, designed to be easy and useful in research, 
 and for experimenting with new ideas in machine learning for code tasks.
 By default, it learns Java source code and predicts Java method names, but it can be easily extended to other languages, 
@@ -34,9 +40,9 @@ Table of Contents
 
 ## Requirements
 On Ubuntu:
-  * [Python3](https://www.linuxbabe.com/ubuntu/install-python-3-6-ubuntu-16-04-16-10-17-04). To check if you have it:
+  * [Python3](https://www.linuxbabe.com/ubuntu/install-python-3-6-ubuntu-16-04-16-10-17-04) (>=3.6). To check the version:
 > python3 --version
-  * TensorFlow - version 2.0.0-beta1 ([install](https://www.tensorflow.org/install/install_linux)).
+  * TensorFlow - version 2.0.0 ([install](https://www.tensorflow.org/install/install_linux)).
   To check TensorFlow version:
 > python3 -c 'import tensorflow as tf; print(tf.\_\_version\_\_)'
   * If you are using a GPU, you will need CUDA 10.0
@@ -99,6 +105,9 @@ tar -xvzf java14m_model_trainable.tar
 
 This model weights more than twice than the stripped version, and it is recommended only if you wish to continue training a model which is already trained. To continue training this trained model, use the `--load` flag to load the trained model; the `--data` flag to point to the new dataset to train on; and the `--save` flag to provide a new save path.
 
+#### A model that was trained on the Java-large dataset
+We provide an additional code2vec model that was trained on the "Java-large" dataset (this dataset was introduced in the code2seq paper). See [Java-large](#java-large-compressed-72gb-extracted-37gb)
+
 #### Training a model from scratch
 To train a model from scratch:
   * Edit the file [train.sh](train.sh) to point it to the right preprocessed data. By default, 
@@ -123,14 +132,14 @@ Once the score on the validation set stops improving over time, you can stop the
 and pick the iteration that performed the best on the validation set.
 Suppose that iteration #8 is our chosen model, run:
 ```
-python3 code2vec.py --load models/java14_model/saved_model_iter8 --test data/java14m/java14m.test.c2v
+python3 code2vec.py --load models/java14_model/saved_model_iter8.release --test data/java14m/java14m.test.c2v
 ```
 While evaluating, a file named "log.txt" is written with each test example name and the model's prediction.
 
 ### Step 4: Manual examination of a trained model
 To manually examine a trained model, run:
 ```
-python3 code2vec.py --load models/java14_model/saved_model_iter8 --predict
+python3 code2vec.py --load models/java14_model/saved_model_iter8.release --predict
 ```
 After the model loads, follow the instructions and edit the file [Input.java](Input.java) and enter a Java 
 method or code snippet, and examine the model's predictions and attention scores.
@@ -220,11 +229,11 @@ In order to export embeddings from a trained model, use the "--save_w2v" and "--
 
 Exporting the trained *token* embeddings:
 ```
-python3 code2vec.py --load models/java14_model/saved_model_iter8 --save_w2v models/java14_model/tokens.txt
+python3 code2vec.py --load models/java14_model/saved_model_iter8.release --save_w2v models/java14_model/tokens.txt
 ```
 Exporting the trained *target* (method name) embeddings:
 ```
-python3 code2vec.py --load models/java14_model/saved_model_iter8 --save_t2v models/java14_model/targets.txt
+python3 code2vec.py --load models/java14_model/saved_model_iter8.release --save_t2v models/java14_model/targets.txt
 ```
 This saves the tokens/targets embedding matrices in word2vec format to the specified text file, in which:
 the first line is: \<vocab_size\> \<dimension\>
@@ -256,9 +265,16 @@ If used with the `--predict` flag, the code vector will be printed to console.
 
 This project currently supports Java and C\# as the input languages.
 
-_**June 2019** - an extractor for **C** that is compatible with our model was developed by [CMU SEI team](https://github.com/cmu-sei/code2vec-c)._
+_**April 2020** - an extension for code2vec that addresses obfuscated Java code was developed by [@basedrhys](https://github.com/basedrhys), and is available here:
+[https://github.com/basedrhys/obfuscated-code2vec](https://github.com/basedrhys/obfuscated-code2vec)._
 
-_**June 2019** - an extractor for **Python** is available here: [PathMiner](https://github.com/vovak/astminer)._
+
+_**January 2020** - an extractor for predicting TypeScript type annotations for JavaScript input using code2vec was developed by [@izosak](https://github.com/izosak) and Noa Cohen, and is available here:
+[https://github.com/tech-srl/id2vec](https://github.com/tech-srl/id2vec)._
+
+~~_**June 2019** - an extractor for **C** that is compatible with our model was developed by [CMU SEI team](https://github.com/cmu-sei/code2vec-c)._~~ - removed by CMU SEI team.
+
+_**June 2019** - an extractor for **Python, Java, C, C++** by JetBrains Research is available here: [PathMiner](https://github.com/JetBrains-Research/astminer)._
 
 In order to extend code2vec to work with other languages, a new extractor (similar to the [JavaExtractor](JavaExtractor))
 should be implemented, and be called by [preprocess.sh](preprocess.sh).
@@ -308,6 +324,17 @@ wget https://s3.amazonaws.com/code2vec/data/java-large_data.tar.gz
 A dataset of the 9500 top-starred Java projects from GitHub that were created
 since January 2007. It contains 9000 projects for training, 200 for validation and 300 for
 testing. Overall, it contains about 16M examples.
+
+Additionally, we provide a trained code2vec model that was trained on the Java-large dataset (this model was not part of the original code2vec paper, but was later used as a baseline in the code2seq paper which introduced this dataset).
+Trainable model (3.5 GB):
+```
+wget https://code2vec.s3.amazonaws.com/model/java-large-model.tar.gz
+```
+
+"Released model" (1.4 GB, cannot be further trained).
+```
+wget https://code2vec.s3.amazonaws.com/model/java-large-released-model.tar.gz
+```
 
 ## Citation
 

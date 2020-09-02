@@ -123,7 +123,8 @@ class Code2VecModel(Code2VecModelBase):
 
             self.eval_top_words_op, self.eval_top_values_op, self.eval_original_names_op, _, _, _, _, \
                 self.eval_code_vectors = self._build_tf_test_graph(input_tensors)
-            self.saver = tf.compat.v1.train.Saver()
+            if self.saver is None:
+                self.saver = tf.compat.v1.train.Saver()
 
         if self.config.MODEL_LOAD_PATH and not self.config.TRAIN_DATA_PATH_PREFIX:
             self._initialize_session_variables()
@@ -378,12 +379,28 @@ class Code2VecModel(Code2VecModelBase):
     def _get_vocab_embedding_as_np_array(self, vocab_type: VocabType) -> np.ndarray:
         assert vocab_type in VocabType
         vocab_tf_variable_name = self.vocab_type_to_tf_variable_name_mapping[vocab_type]
-        with tf.compat.v1.variable_scope('model', reuse=None):
-            embeddings = tf.compat.v1.get_variable(vocab_tf_variable_name)
-            self.saver = tf.compat.v1.train.Saver()
-            self._load_inner_model(self.sess)
-            vocab_embedding_matrix = self.sess.run(embeddings)
-            return vocab_embedding_matrix
+        
+        if self.eval_reader is None:
+            self.eval_reader = PathContextReader(vocabs=self.vocabs,
+                                                 model_input_tensors_former=_TFEvaluateModelInputTensorsFormer(),
+                                                 config=self.config, estimator_action=EstimatorAction.Evaluate)
+            input_iterator = tf.compat.v1.data.make_initializable_iterator(self.eval_reader.get_dataset())
+            _, _, _, _, _, _, _, _ = self._build_tf_test_graph(input_iterator.get_next())
+
+        if vocab_type is VocabType.Token:
+            shape = (self.vocabs.token_vocab.size, self.config.TOKEN_EMBEDDINGS_SIZE)
+        elif vocab_type is VocabType.Target:
+            shape = (self.vocabs.target_vocab.size, self.config.TARGET_EMBEDDINGS_SIZE)
+        elif vocab_type is VocabType.Path:
+            shape = (self.vocabs.path_vocab.size, self.config.PATH_EMBEDDINGS_SIZE)
+
+        with tf.compat.v1.variable_scope('model', reuse=True):
+            embeddings = tf.compat.v1.get_variable(vocab_tf_variable_name, shape=shape)
+        self.saver = tf.compat.v1.train.Saver()
+        self._initialize_session_variables() 
+        self._load_inner_model(self.sess) 
+        vocab_embedding_matrix = self.sess.run(embeddings)
+        return vocab_embedding_matrix
 
     def get_should_reuse_variables(self):
         if self.config.TRAIN_DATA_PATH_PREFIX:
@@ -513,10 +530,10 @@ class _TFTrainModelInputTensorsFormer(ModelInputTensorsFormer):
 
 class _TFEvaluateModelInputTensorsFormer(ModelInputTensorsFormer):
     def to_model_input_form(self, input_tensors: ReaderInputTensors):
-        return input_tensors.target_string, input_tensors.path_source_token_indices, input_tensors.path_indices, \
-               input_tensors.path_target_token_indices, input_tensors.context_valid_mask, \
-               input_tensors.path_source_token_strings, input_tensors.path_strings, \
-               input_tensors.path_target_token_strings
+        return (input_tensors.target_string, input_tensors.path_source_token_indices, input_tensors.path_indices,
+                input_tensors.path_target_token_indices, input_tensors.context_valid_mask,
+                input_tensors.path_source_token_strings, input_tensors.path_strings,
+                input_tensors.path_target_token_strings)
 
     def from_model_input_form(self, input_row) -> ReaderInputTensors:
         return ReaderInputTensors(

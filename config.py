@@ -13,7 +13,7 @@ class Config:
         parser.add_argument("-d", "--data", dest="data_path",
                             help="path to preprocessed dataset", required=False)
         parser.add_argument("-te", "--test", dest="test_path",
-                            help="path to test file", metavar="FILE", required=False)
+                            help="path to test file", metavar="FILE", required=False, default='')
         parser.add_argument("-s", "--save", dest="save_path",
                             help="path to save the model file", metavar="FILE", required=False)
         parser.add_argument("-w2v", "--save_word2v", dest="save_w2v",
@@ -117,7 +117,7 @@ class Config:
         self.MODEL_SAVE_PATH: Optional[str] = None
         self.MODEL_LOAD_PATH: Optional[str] = None
         self.TRAIN_DATA_PATH_PREFIX: Optional[str] = None
-        self.TEST_DATA_PATH: Optional[str] = None
+        self.TEST_DATA_PATH: Optional[str] = ''
         self.RELEASE: bool = False
         self.EXPORT_CODE_VECTORS: bool = False
         self.SAVE_W2V: Optional[str] = None   # TODO: update README;
